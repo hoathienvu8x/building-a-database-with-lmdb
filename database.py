@@ -1,7 +1,6 @@
 import lmdb
 from models import Sample
-from typing import List
-
+from typing import List, Iterable
 
 Ki = 1024
 Mi = 1024 * Ki
@@ -29,18 +28,19 @@ KEYS_BY_TIMESTAMP = ENV.open_db("timestamp_index".encode(), dupsort=True)
 
 
 def write_sample(ident: str, sample: float, timestamp: float) -> Sample:
-    input_sample = Sample(ident=ident.encode(), sample=sample, timestamp=timestamp)
+    ident_encoded = ident.encode()
+    input_sample = Sample(ident=ident_encoded, sample=sample, timestamp=timestamp)
     global ENV
     with ENV.begin(write=True) as txn:
-        key = f"{input_sample.ident.decode()}-{input_sample.timestamp}".encode()
+        key = input_sample.ident + b"/" + int(timestamp).to_bytes(8, byteorder="big")
         txn.put(key, bytes(input_sample))
         txn.put(input_sample.ident, key, db=KEYS_BY_IDENTITY)
-        txn.put(f"{int(input_sample.timestamp)}".encode(), key, db=KEYS_BY_TIMESTAMP)
+        txn.put(int(timestamp).to_bytes(8, byteorder="big"), key, db=KEYS_BY_TIMESTAMP)
     return input_sample
 
 
-def get_samples_by_ident(ident: str) -> List[Sample]:
-    samples: List[Sample] = []
+def get_samples_by_ident(ident: str) -> Iterable[Sample]:
+    samples: List[Sample] = list()
     global ENV
     with ENV.begin() as txn:
         with txn.cursor(KEYS_BY_IDENTITY) as cursor:
@@ -55,7 +55,7 @@ def get_samples_by_timestamp(timestamp: float) -> List[Sample]:
     global ENV
     with ENV.begin() as txn:
         with txn.cursor(KEYS_BY_TIMESTAMP) as cursor:
-            cursor.set_key(str(int(timestamp)).encode())
+            cursor.set_key(int(timestamp).to_bytes(8, byteorder="big"))
             for key in cursor.iternext_dup():
                 samples.append(Sample.from_buffer_copy(txn.get(key)))
     return samples

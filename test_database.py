@@ -20,7 +20,7 @@ class DatabaseTestCase(unittest.TestCase):
         outputs = defaultdict(dict)
         for i in range(3):
             ident = str(uuid4())
-            for j in range(5):
+            for j in range(5000):
                 sample = random()
                 timestamp = uniform(0, 100000000)
                 output = database.write_sample(ident, sample, timestamp)
@@ -36,7 +36,7 @@ class DatabaseTestCase(unittest.TestCase):
         timestamp = uniform(0, 100000000)
         outputs = defaultdict(dict)
         for i in range(3):
-            for j in range(5):
+            for j in range(5000):
                 ident = str(uuid4())
                 sample = random()
                 output = database.write_sample(ident, sample, timestamp + i)
