@@ -7,7 +7,11 @@ import database
 
 
 class DatabaseTestCase(unittest.TestCase):
-    def test_write_sample(self):
+
+    def setUp(self) -> None:
+        database.drop_all_data()
+
+    def test_1_write_sample(self):
         ident = str(uuid4())
         sample = random()
         timestamp = uniform(0, 100000000)
@@ -16,15 +20,18 @@ class DatabaseTestCase(unittest.TestCase):
         self.assertEqual(output.timestamp, timestamp)
         self.assertEqual(output.sample, sample)
 
-    def test_read_by_ident(self):
+    def test_2_read_by_ident(self):
         outputs = defaultdict(dict)
+        samples = []
         for i in range(3):
             ident = str(uuid4())
-            for j in range(5000):
+            for j in range(50):
                 sample = random()
                 timestamp = uniform(0, 100000000)
-                output = database.write_sample(ident, sample, timestamp)
+                output = database.Sample(ident.encode(), sample, timestamp)
                 outputs[ident][timestamp] = output
+                samples.append(output)
+        database.bulk_write(samples)
         for ident in outputs.keys():
             for sample in database.get_samples_by_ident(ident):
                 output = outputs[ident][sample.timestamp]
@@ -32,15 +39,18 @@ class DatabaseTestCase(unittest.TestCase):
                 self.assertEqual(output.timestamp, sample.timestamp)
                 self.assertEqual(output.sample, sample.sample)
 
-    def test_read_by_timestamp(self):
+    def test_3_read_by_timestamp(self):
         timestamp = uniform(0, 100000000)
         outputs = defaultdict(dict)
+        samples = []
         for i in range(3):
-            for j in range(5000):
+            for j in range(50):
                 ident = str(uuid4())
                 sample = random()
-                output = database.write_sample(ident, sample, timestamp + i)
+                output = database.Sample(ident.encode(), sample, timestamp + i)
                 outputs[timestamp + i][ident.encode()] = output
+                samples.append(output)
+        database.bulk_write(samples)
         for i in range(3):
             samples = database.get_samples_by_timestamp(timestamp + i)
             self.assertEqual(len(samples), len(outputs[timestamp + i]))
